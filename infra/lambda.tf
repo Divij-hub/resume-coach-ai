@@ -6,11 +6,21 @@ resource "aws_iam_role" "lambda_exec" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "logs"     { role = aws_iam_role.lambda_exec.name, policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole" }
-resource "aws_iam_role_policy_attachment" "dynamodb" { role = aws_iam_role.lambda_exec.name, policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess" }
-resource "aws_iam_role_policy_attachment" "bedrock"  { role = aws_iam_role.lambda_exec.name, policy_arn = "arn:aws:iam::aws:policy/AmazonBedrockFullAccess" }
+resource "aws_iam_role_policy_attachment" "logs" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
 
-resource "aws_lambda_function" "api" {
+resource "aws_iam_role_policy_attachment" "dynamodb" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "bedrock" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
+}
+resource "aws_lambda_function" "resume_coach" {
   filename         = "lambda.zip"
   source_code_hash = filebase64sha256("lambda.zip")
   function_name    = "${local.name_prefix}-api"

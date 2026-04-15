@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "7.2.0",
+    "@tailwindcss/postcss": "^4.2.2",
     "lucide-react": "latest",
     "next": "latest",
     "react": "latest",
@@ -18,8 +19,9 @@
   "devDependencies": {
     "@types/node": "latest",
     "@types/react": "latest",
-    "postcss": "latest",
-    "tailwindcss": "latest",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.10",
+    "tailwindcss": "^4.2.2",
     "typescript": "latest"
   }
 }
