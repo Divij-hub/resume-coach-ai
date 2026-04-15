@@ -34,9 +34,18 @@ resource "aws_lambda_function" "resume_coach" {
       USE_DYNAMODB     = "true"
       DYNAMODB_TABLE   = aws_dynamodb_table.conversations.name
       BEDROCK_REGION   = var.aws_region
-      BEDROCK_MODEL_ID = var.bedrock_model_id
+      BEDROCK_MODEL_ID = "us.amazon.nova-lite-v1:0"  # <--- Add quotes here!
       CLERK_JWKS_URL   = var.clerk_jwks_url
       SECRET_NAME      = "${var.project_name}/config-${terraform.workspace}"
     }
   }
+}
+resource "aws_lambda_permission" "api_gw" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.resume_coach.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  # This connects the permission to your specific API Gateway
+  source_arn = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }

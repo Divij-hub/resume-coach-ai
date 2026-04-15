@@ -12,7 +12,10 @@ resource "aws_apigatewayv2_stage" "dev" {
 resource "aws_apigatewayv2_integration" "lambda" {
   api_id           = aws_apigatewayv2_api.main.id
   integration_type = "AWS_PROXY"
-  integration_uri  = aws_lambda_function.resume_coach.invoke_arn # Ensure this matches your lambda resource name
+  integration_uri  = aws_lambda_function.resume_coach.invoke_arn
+  
+  # ADD THIS LINE
+  payload_format_version = "2.0" 
 }
 
 resource "aws_apigatewayv2_route" "post_analyze" {
