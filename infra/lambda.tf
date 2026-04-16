@@ -45,9 +45,9 @@ resource "aws_lambda_function" "api" {
 resource "aws_lambda_permission" "api_gw" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.resume_coach.function_name
+  # CHANGE THIS:
+  function_name = aws_lambda_function.api.function_name 
   principal     = "apigateway.amazonaws.com"
 
-  # This connects the permission to your specific API Gateway
   source_arn = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
