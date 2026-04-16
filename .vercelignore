@@ -1,0 +1,7 @@
+infra/
+node_modules/
+.terraform/
+*.exe
+lambda.zip
+out/
+.next/

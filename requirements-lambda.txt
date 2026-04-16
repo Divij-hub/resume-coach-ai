@@ -1,0 +1,7 @@
+# In your project root, create requirements-lambda.txt with:
+fastapi
+uvicorn
+boto3
+python-multipart
+fastapi-clerk-auth
+mangum

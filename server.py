@@ -1,18 +1,30 @@
-import os, boto3, json
-from fastapi import FastAPI
+import os
+import json
+import boto3
+from fastapi import FastAPI, Depends
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
-# Keep your custom imports
+from fastapi_clerk_auth import ClerkConfig, ClerkHTTPBearer, HTTPAuthorizationCredentials
+from botocore.exceptions import ClientError
+
+# Internal module imports
 from dynamo_memory import load_conversation, save_conversation
 from secrets import get_secret
 
 app = FastAPI()
 
-# --- Configuration ---
+# --- Configuration & Secrets ---
 USE_DYNAMODB = os.getenv("USE_DYNAMODB", "false").lower() == "true"
 SECRET_NAME = os.getenv("SECRET_NAME", "resume-coach/config-dev")
 
-# --- CORS Logic ---
+# Initialize Bedrock Client [cite: 199]
+bedrock = boto3.client(
+    service_name="bedrock-runtime", 
+    region_name=os.getenv("BEDROCK_REGION", "us-east-1")
+)
+
+# --- CORS Configuration [cite: 205] ---
 if USE_DYNAMODB:
     try:
         config = get_secret(SECRET_NAME)
@@ -29,57 +41,77 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Data Models ---
+# --- Data Model for Resume Coach [cite: 29, 207] ---
 class ResumeInput(BaseModel):
     resume_text: str = Field(..., min_length=100)
     job_description: str = Field(..., min_length=50)
+    target_role: str = Field(default="Professional Role")
+    years_experience: int = Field(default=0, ge=0)
+    session_id: str = Field(default_factory=lambda: "default-session")
 
-# --- Resume Coach Prompt ---
+# --- System Prompt [cite: 37-53] ---
 SYSTEM_PROMPT = """
-You are a Professional Resume Coach and Executive Recruiter. 
-Analyze the provided resume against the job description and provide:
+You are a Professional Resume Coach and Executive Recruiter. [cite: 37]
+Provide your analysis using exactly these three headings: [cite: 39]
 
-## Resume Score & Critique
-Rate the match out of 10. Identify 3 critical gaps where the resume fails to meet the job requirements.
+## Strengths & Alignment Analysis
+Map the candidate's experience to the job description requirements. [cite: 41]
 
-## STAR-Method Bullet Points
-Rewrite 3-5 existing bullet points from the resume to be more impact-oriented using the STAR (Situation, Task, Action, Result) method.
+## Critical Gap Analysis
+Identify 3 missing keywords or skills that might trigger ATS filters. [cite: 45, 46]
 
 ## Tailored Cover Letter
-Provide a concise, 3-paragraph cover letter that bridges the candidate's specific experience to the job's needs.
+Write a 3-paragraph cover letter using achievement-based language. [cite: 48-51]
+
+Constraint: Use the STAR method (Situation, Task, Action, Result) for all suggestions. [cite: 52]
 """
+
+def user_prompt_for(record: ResumeInput) -> str:
+    """Formats the user data for the Bedrock Converse API[cite: 118]."""
+    return (
+        f"TARGET ROLE: {record.target_role}\n"
+        f"YEARS OF EXPERIENCE: {record.years_experience}\n\n"
+        f"RESUME CONTENT:\n{record.resume_text}\n\n"
+        f"JOB DESCRIPTION:\n{record.job_description}"
+    )
 
 # --- Endpoints ---
 
 @app.get("/health")
 def health_check():
-    """Required for AWS Lambda Health Check Verification"""
+    """Required for AWS Lambda Health Verification [cite: 215]"""
     return {"status": "healthy", "version": "2.0-resume-coach"}
 
-@app.post("/analyze")
-async def process_resume(record: ResumeInput):
-    # Initialize Bedrock Client
-    bedrock = boto3.client(service_name="bedrock-runtime", region_name="us-east-1")
+@app.post("/api/analyze")
+async def process(
+    record: ResumeInput,
+    creds: HTTPAuthorizationCredentials = Depends(ClerkHTTPBearer(ClerkConfig(jwks_url=os.getenv("CLERK_JWKS_URL"))))
+):
+    model_id = os.getenv("BEDROCK_MODEL_ID", "us.amazon.nova-lite-v1:0") [cite: 219]
     
-    user_message = f"""
-    RESUME TEXT:
-    {record.resume_text}
-
-    JOB DESCRIPTION:
-    {record.job_description}
-    """
-    
-    # Bedrock Converse API Call (Using Nova Lite as required)
-    response = bedrock.converse(
-        modelId="global.amazon.nova-lite-v1:0",
-        messages=[{"role": "user", "content": [{"text": user_message}]}],
-        system=[{"text": SYSTEM_PROMPT}]
-    )
-    
-    ai_response = response["output"]["message"]["content"][0]["text"]
-    
-    # Save to DynamoDB if enabled (using job_description hash or similar as key)
-    if USE_DYNAMODB:
-        save_conversation("resume-analysis", [{"role": "assistant", "content": ai_response}])
+    try:
+        # 1. Load History [cite: 220]
+        conversation = load_conversation(record.session_id) if USE_DYNAMODB else []
         
-    return {"analysis": ai_response}
+        # 2. Build Message [cite: 221]
+        user_message = {"role": "user", "content": [{"text": user_prompt_for(record)}]}
+        
+        # 3. Call Bedrock Converse API [cite: 222]
+        response = bedrock.converse(
+            modelId=model_id,
+            system=[{"text": SYSTEM_PROMPT}],
+            messages=conversation + [user_message]
+        )
+        
+        analysis = response["output"]["message"]["content"][0]["text"] [cite: 227]
+        
+        # 4. Save to DynamoDB [cite: 231]
+        if USE_DYNAMODB:
+            conversation.append(user_message)
+            conversation.append({"role": "assistant", "content": [{"text": analysis}]})
+            save_conversation(record.session_id, conversation)
+            
+        return JSONResponse({"analysis": analysis, "session_id": record.session_id})
+
+    except ClientError as e:
+        return JSONResponse({"error": str(e)}, status_code=500)

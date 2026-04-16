@@ -8,35 +8,39 @@ export default function ProductPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+    // Update this section in your product.tsx
   const handleAnalyze = async () => {
-    setLoading(true);
-    setError(null);
-    setAnalysis('');
+      setLoading(true);
+      setError(null);
+      setAnalysis('');
 
-    try {
-      // Note: CloudFront routes /api/* to your AWS API Gateway
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ resumeText: resume }),
-      });
+      try {
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          // CHANGE THIS LINE: use resume_text instead of resumeText
+          body: JSON.stringify({ 
+            resume_text: resume, 
+            job_description: "General professional review", // Add required fields
+            target_role: "Candidate",
+            years_experience: 0
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error('Failed to analyze resume. Please try again.');
+        if (!response.ok) {
+          throw new Error('Failed to analyze resume. Please try again.');
+        }
+
+        const data = await response.json();
+        setAnalysis(data.analysis);
+      } catch (err: any) {
+        setError(err.message || "Something went wrong.");
+        console.error("Analysis Error:", err);
+      } finally {
+        setLoading(false);
       }
-
-      const data = await response.json();
-      
-      // Assuming your Lambda returns { analysis: "..." }
-      setAnalysis(data.analysis);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong.");
-      console.error("Analysis Error:", err);
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (

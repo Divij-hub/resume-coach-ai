@@ -1,7 +1,5 @@
 fastapi
 uvicorn
-boto3
+openai
 python-multipart
 fastapi-clerk-auth
-mangum
-openai
