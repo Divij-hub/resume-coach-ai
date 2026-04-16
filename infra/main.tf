@@ -14,6 +14,7 @@ provider "aws" {
 # 1. Define the missing local variables
 locals {
   name_prefix = "resume-coach-ai-default"
+  s3_origin_id = "${var.project_name}-s3-${terraform.workspace}"
 }
 
 # 2. Declare the data sources to fetch account and region info

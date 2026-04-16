@@ -20,7 +20,8 @@ resource "aws_iam_role_policy_attachment" "bedrock" {
   role       = aws_iam_role.lambda_exec.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
 }
-resource "aws_lambda_function" "resume_coach" {
+# Change "resume_coach" to "api" to match your api_gateway.tf
+resource "aws_lambda_function" "api" {
   filename         = "lambda.zip"
   source_code_hash = filebase64sha256("lambda.zip")
   function_name    = "${local.name_prefix}-api"
@@ -28,6 +29,7 @@ resource "aws_lambda_function" "resume_coach" {
   handler          = "lambda_handler.handler"
   runtime          = "python3.12"
   timeout          = var.lambda_timeout
+  # ... rest of your code stays the same
 
   environment {
     variables = {

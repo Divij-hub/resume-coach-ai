@@ -19,7 +19,9 @@ resource "aws_apigatewayv2_stage" "dev" {
 resource "aws_apigatewayv2_integration" "lambda" {
   api_id           = aws_apigatewayv2_api.main.id
   integration_type = "AWS_PROXY"
-  integration_uri  = aws_lambda_function.api.invoke_arn # Matches lambda.tf name
+  # ENSURE THIS SAYS .api. AND NOT .resume_coach.
+  integration_uri  = aws_lambda_function.api.invoke_arn 
+  
   payload_format_version = "2.0" 
 }
 
