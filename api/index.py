@@ -1,14 +1,28 @@
 import os
-from fastapi import FastAPI, Depends
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field, validator
-from fastapi_clerk_auth import ClerkConfig, ClerkHTTPBearer, HTTPAuthorizationCredentials
-from openai import OpenAI
+import boto3
 import re
+from fastapi import FastAPI, Depends
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field, validator
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi_clerk_auth import ClerkConfig, ClerkHTTPBearer, HTTPAuthorizationCredentials
 
 app = FastAPI()
-clerk_config = ClerkConfig(jwks_url=os.getenv("CLERK_JWKS_URL"))
-clerk_guard = ClerkHTTPBearer(clerk_config)
+
+# --- CORS Configuration ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://d8bh9r3rlkcvv.cloudfront.net", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Initialize Bedrock
+bedrock = boto3.client(
+    service_name="bedrock-runtime", 
+    region_name=os.getenv("BEDROCK_REGION", "us-east-1")
+)
 
 class InputRecord(BaseModel):
     cve_id: str
@@ -23,26 +37,23 @@ class InputRecord(BaseModel):
             raise ValueError("Invalid CVE format")
         return v
 
-SYSTEM_PROMPT = "You are a Cybersecurity Analyst. Provide: ## Executive Risk Summary, ## Technical Remediation Plan, and ## Internal Security Advisory."
+SYSTEM_PROMPT = "You are a Cybersecurity Analyst. Provide: ## Executive Risk Summary, ## Technical Remediation Plan, and ## Internal Security Advisory. Use the STAR method for remediation steps."
 
-@app.get("/health")
-def health_check():
-    return {"status": "healthy", "version": "1.0"}
-
-@app.post("/api/analyze")
-def process(record: InputRecord, creds: HTTPAuthorizationCredentials = Depends(clerk_guard)):
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    user_prompt = f"Analyze {record.cve_id} on {record.affected_system}. Data: {record.technical_text}"
+@app.post("/api")
+async def process(
+    record: InputRecord, 
+    creds: HTTPAuthorizationCredentials = Depends(ClerkHTTPBearer(ClerkConfig(jwks_url=os.getenv("CLERK_JWKS_URL"))))
+):
+    model_id = os.getenv("BEDROCK_MODEL_ID", "global.amazon.nova-lite-v1:0") [cite: 6, 9]
+    user_prompt = f"Analyze {record.cve_id} (Score: {record.base_score}) on {record.affected_system}. Data: {record.technical_text}"
     
-    stream = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_prompt}],
-        stream=True
-    )
-
-    def event_stream():
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                yield f"data: {chunk.choices[0].delta.content}\n\n"
-
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
+    try:
+        response = bedrock.converse(
+            modelId=model_id,
+            system=[{"text": SYSTEM_PROMPT}],
+            messages=[{"role": "user", "content": [{"text": user_prompt}]}]
+        )
+        analysis = response["output"]["message"]["content"][0]["text"]
+        return JSONResponse({"analysis": analysis})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
