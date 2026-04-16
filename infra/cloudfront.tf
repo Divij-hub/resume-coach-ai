@@ -21,19 +21,7 @@ resource "aws_cloudfront_distribution" "main" {
   origin {
     domain_name = "${aws_apigatewayv2_api.main.id}.execute-api.us-east-1.amazonaws.com"
     origin_id   = "APIGatewayOrigin"
-    origin_path = "/dev" # <--- CRITICAL: This maps /api/* to /dev/api/*
-
-    custom_error_response {
-      error_code            = 403
-      response_code         = 200
-      response_page_path    = "/index.html"
-    }
-
-    custom_error_response {
-      error_code            = 404
-      response_code         = 200
-      response_page_path    = "/index.html"
-    }
+    origin_path = "/dev" # Maps /api/* to /dev/api/*
     
     custom_origin_config {
       http_port              = 80
@@ -42,7 +30,8 @@ resource "aws_cloudfront_distribution" "main" {
       origin_ssl_protocols   = ["TLSv1.2"]
     }
   }
-  # Health Check Behavior (Add this above /api/*)
+
+  # Health Check Behavior
   ordered_cache_behavior {
     path_pattern     = "/health"
     target_origin_id = "APIGatewayOrigin"
@@ -57,7 +46,7 @@ resource "aws_cloudfront_distribution" "main" {
     }
   }
 
-  # API Behavior (MUST COME BEFORE DEFAULT)
+  # API Behavior
   ordered_cache_behavior {
     path_pattern     = "/api/*"
     target_origin_id = "APIGatewayOrigin"
@@ -67,7 +56,7 @@ resource "aws_cloudfront_distribution" "main" {
 
     forwarded_values {
       query_string = true
-      headers      = ["Authorization", "Content-Type"] # <--- REQUIRED for Clerk & JSON
+      headers      = ["Authorization", "Content-Type"]
       cookies { forward = "all" }
     }
   }
@@ -83,6 +72,23 @@ resource "aws_cloudfront_distribution" "main" {
       cookies { forward = "none" }
     }
   }
+
+  # --- FIX STARTS HERE ---
+  # These blocks handle SPA routing for Next.js static exports
+  custom_error_response {
+    error_code            = 403
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 10
+  }
+
+  custom_error_response {
+    error_code            = 404
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 10
+  }
+  # --- FIX ENDS HERE ---
 
   restrictions {
     geo_restriction { restriction_type = "none" }
