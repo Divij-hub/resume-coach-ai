@@ -48,6 +48,7 @@ resource "aws_cloudfront_distribution" "main" {
 
   # API Behavior
  # API Behavior (MUST COME BEFORE DEFAULT)
+  # API Behavior
   ordered_cache_behavior {
     path_pattern     = "/api/*"
     target_origin_id = "APIGatewayOrigin"
@@ -58,15 +59,14 @@ resource "aws_cloudfront_distribution" "main" {
     forwarded_values {
       query_string = true
       
-      # THE CRITICAL FIX: Forward these headers to resolve CORS errors
+      # YOU MUST ADD "Origin" and the Access-Control headers here
       headers = [
         "Authorization", 
         "Content-Type", 
-        "Origin",                        # Tells API Gateway which site is calling
-        "Access-Control-Request-Method", # Needed for the Preflight "OPTIONS" call
-        "Access-Control-Request-Headers" # Needed for the Preflight "OPTIONS" call
+        "Origin", 
+        "Access-Control-Request-Method", 
+        "Access-Control-Request-Headers"
       ]
-      
       cookies { forward = "all" }
     }
   }

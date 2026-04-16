@@ -2,7 +2,7 @@ resource "aws_apigatewayv2_api" "main" {
   name          = "resume-coach-api"
   protocol_type = "HTTP"
 
-  # --- THE FIX: CORS Configuration ---
+  # --- CRITICAL: This allows the browser to pass the security check ---
   cors_configuration {
     allow_origins = ["https://d8bh9r3rlkcvv.cloudfront.net", "http://localhost:3000"]
     allow_methods = ["POST", "GET", "OPTIONS"]
