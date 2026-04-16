@@ -1,6 +1,14 @@
 resource "aws_apigatewayv2_api" "main" {
   name          = "resume-coach-api"
   protocol_type = "HTTP"
+
+  # --- THE FIX: CORS Configuration ---
+  cors_configuration {
+    allow_origins = ["https://d8bh9r3rlkcvv.cloudfront.net", "http://localhost:3000"]
+    allow_methods = ["POST", "GET", "OPTIONS"]
+    allow_headers = ["content-type", "authorization"]
+    max_age       = 300
+  }
 }
 
 resource "aws_apigatewayv2_stage" "dev" {
@@ -14,7 +22,6 @@ resource "aws_apigatewayv2_integration" "lambda" {
   integration_type = "AWS_PROXY"
   integration_uri  = aws_lambda_function.resume_coach.invoke_arn
   
-  # ADD THIS LINE
   payload_format_version = "2.0" 
 }
 
