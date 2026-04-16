@@ -2,7 +2,7 @@ resource "aws_apigatewayv2_api" "main" {
   name          = "resume-coach-api"
   protocol_type = "HTTP"
 
-  # --- CRITICAL: This allows the browser to pass the security check ---
+  # --- THIS IS WHAT STOPS THE 404 ON OPTIONS ---
   cors_configuration {
     allow_origins = ["https://d8bh9r3rlkcvv.cloudfront.net", "http://localhost:3000"]
     allow_methods = ["POST", "GET", "OPTIONS"]
@@ -11,6 +11,7 @@ resource "aws_apigatewayv2_api" "main" {
   }
 }
 
+# The rest of your stages, integrations, and routes stay exactly the same
 resource "aws_apigatewayv2_stage" "dev" {
   api_id      = aws_apigatewayv2_api.main.id
   name        = "dev"
