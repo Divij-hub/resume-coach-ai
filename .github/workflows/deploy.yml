@@ -39,12 +39,14 @@ jobs:
       # if the file doesn't exist on the runner.
       - name: Build Lambda ZIP
         run: |
-          mkdir -p lambda_package
-          pip install -r backend/requirements.txt -t lambda_package/
-          cp backend/*.py lambda_package/
+          mkdir -p lambda_package/api
+          pip install -r requirements.txt -t lambda_package/
+          cp lambda_handler.py lambda_package/
+          cp server.py lambda_package/
+          cp api/index.py lambda_package/api/
           cd lambda_package
-          zip -r ../lambda.zip .
-
+          zip -r ../infra/lambda.zip .
+          
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
