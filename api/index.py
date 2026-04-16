@@ -29,7 +29,7 @@ SYSTEM_PROMPT = "You are a Cybersecurity Analyst. Provide: ## Executive Risk Sum
 def health_check():
     return {"status": "healthy", "version": "1.0"}
 
-@app.post("/api")
+@app.post("/api/analyze")
 def process(record: InputRecord, creds: HTTPAuthorizationCredentials = Depends(clerk_guard)):
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     user_prompt = f"Analyze {record.cve_id} on {record.affected_system}. Data: {record.technical_text}"

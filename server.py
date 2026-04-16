@@ -85,7 +85,7 @@ async def process(
     record: ResumeInput,
     creds: HTTPAuthorizationCredentials = Depends(ClerkHTTPBearer(ClerkConfig(jwks_url=os.getenv("CLERK_JWKS_URL"))))
 ):
-    model_id = os.getenv("BEDROCK_MODEL_ID", "us.amazon.nova-lite-v1:0") [cite: 219]
+    model_id = os.getenv("BEDROCK_MODEL_ID", "us.amazon.nova-lite-v1:0") 
     
     try:
         # 1. Load History [cite: 220]
@@ -101,7 +101,7 @@ async def process(
             messages=conversation + [user_message]
         )
         
-        analysis = response["output"]["message"]["content"][0]["text"] [cite: 227]
+        analysis = response["output"]["message"]["content"][0]["text"]
         
         # 4. Save to DynamoDB [cite: 231]
         if USE_DYNAMODB:
