@@ -7,6 +7,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Force Node 24 to fix warnings
     permissions:
       id-token: write
       contents: read
@@ -18,7 +20,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24' # Updated to Node 24
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -43,7 +45,7 @@ jobs:
           echo "cloudfront_id=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_OUTPUT
 
       - name: Install Dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps # Avoids peer dependency conflicts
 
       - name: Build Frontend
         env:
