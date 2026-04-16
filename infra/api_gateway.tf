@@ -4,9 +4,9 @@ resource "aws_apigatewayv2_api" "main" {
 
   # --- THIS IS WHAT STOPS THE 404 ON OPTIONS ---
   cors_configuration {
-    allow_origins = ["https://d8bh9r3rlkcvv.cloudfront.net", "http://localhost:3000"]
-    allow_methods = ["POST", "GET", "OPTIONS"]
-    allow_headers = ["content-type", "authorization"]
+    allow_origins = ["https://d8bh9r3rlkcvv.cloudfront.net"]
+    allow_methods = ["GET", "POST", "OPTIONS"]
+    allow_headers = ["Authorization", "Content-Type"]
     max_age       = 300
   }
 }
@@ -36,4 +36,15 @@ resource "aws_apigatewayv2_route" "get_health" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "GET /health"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+resource "aws_apigatewayv2_api" "lambda_api" {
+  name          = "resume-coach-api"
+  protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_origins = ["https://d8bh9r3rlkcvv.cloudfront.net"]
+    allow_methods = ["GET", "POST", "OPTIONS"]
+    allow_headers = ["Authorization", "Content-Type"]
+    max_age       = 300
+  }
 }
