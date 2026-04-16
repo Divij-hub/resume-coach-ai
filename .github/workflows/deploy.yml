@@ -7,8 +7,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
-    # These permissions are required for AWS authentication
     permissions:
       id-token: write
       contents: read
@@ -21,12 +19,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          # Replace these with your GitHub Secret names if they differ
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1 
@@ -37,7 +38,6 @@ jobs:
         run: |
           terraform init
           terraform apply -auto-approve
-          # Export outputs so subsequent steps can use them
           echo "api_url=$(terraform output -raw api_url)" >> $GITHUB_OUTPUT
           echo "frontend_bucket=$(terraform output -raw frontend_bucket)" >> $GITHUB_OUTPUT
           echo "cloudfront_id=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_OUTPUT
@@ -47,7 +47,6 @@ jobs:
 
       - name: Build Frontend
         env:
-          # THIS IS THE CRITICAL PART: Injecting your Clerk key
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_API_URL: ${{ steps.tf_apply.outputs.api_url }}
         run: npm run build
@@ -58,6 +57,4 @@ jobs:
 
       - name: Invalidate CloudFront
         run: |
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ steps.tf_apply.outputs.cloudfront_id }} \
-            --paths "/*"
+          aws cloudfront create-invalidation --distribution-id ${{ steps.tf_apply.outputs.cloudfront_id }} --paths "/*"
