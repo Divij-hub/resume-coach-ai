@@ -1,18 +1,21 @@
 terraform {
-  required_version = ">= 1.6"
   required_providers {
-    aws = { source = "hashicorp/aws", version = "~> 5.0" }
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
   }
 }
 
 provider "aws" {
-  region = var.aws_region
+  region = "us-east-1"
 }
 
-data "aws_caller_identity" "current" {}
-data "aws_region"          "current" {}
-
+# 1. Define the missing local variables
 locals {
-  name_prefix  = "${var.project_name}-${terraform.workspace}"
-  s3_origin_id = "${var.project_name}-s3-${terraform.workspace}"
+  name_prefix = "resume-coach-ai-default"
 }
+
+# 2. Declare the data sources to fetch account and region info
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
