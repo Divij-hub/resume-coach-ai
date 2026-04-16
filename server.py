@@ -33,10 +33,10 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=origins,  # no trailing slash
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all (GET, POST, OPTIONS, etc.)
-    allow_headers=["*"],  # Allow all (Authorization, Content-Type, etc.)
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # --- Updated Data Model ---
