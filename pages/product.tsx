@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UserButton } from "@clerk/nextjs";
+import { UserButton, useAuth } from "@clerk/nextjs";
 import ReactMarkdown from 'react-markdown';
 
 export default function ProductPage() {
@@ -7,66 +7,85 @@ export default function ProductPage() {
   const [analysis, setAnalysis] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Initialize the Clerk Auth hook to get the security token
+  const { getToken } = useAuth();
 
-    // Update this section in your product.tsx
   const handleAnalyze = async () => {
-      setLoading(true);
-      setError(null);
-      setAnalysis('');
+    setLoading(true);
+    setError(null);
+    setAnalysis('');
 
-      try {
-        const response = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          // CHANGE THIS LINE: use resume_text instead of resumeText
-          body: JSON.stringify({ 
-            resume_text: resume, 
-            job_description: "General professional review", // Add required fields
-            target_role: "Candidate",
-            years_experience: 0
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to analyze resume. Please try again.');
-        }
-
-        const data = await response.json();
-        setAnalysis(data.analysis);
-      } catch (err: any) {
-        setError(err.message || "Something went wrong.");
-        console.error("Analysis Error:", err);
-      } finally {
-        setLoading(false);
+    try {
+      // 1. Get the secure JWT token from Clerk
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error("You must be signed in to perform this action.");
       }
+
+      // 2. Point this to your FastAPI backend URL (from .env.local)
+      // Note: Ensure NEXT_PUBLIC_API_URL is set to your AWS API Gateway or Vercel backend
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`, // Send the security token to Python
+        },
+        body: JSON.stringify({ 
+          resume_text: resume, 
+          job_description: "General professional review",
+          target_role: "Candidate",
+          years_experience: 0
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze resume. Please check your connection.');
+      }
+
+      const data = await response.json();
+      setAnalysis(data.analysis);
+    } catch (err: any) {
+      setError(err.message || "Something went wrong.");
+      console.error("Analysis Error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b px-8 py-4 flex justify-between items-center">
-        <h2 className="text-lg font-bold text-slate-800">Analysis Workspace</h2>
-        <UserButton />
+      {/* Header / Navigation */}
+      <header className="bg-white border-b px-8 py-4 flex justify-between items-center shadow-sm">
+        <div className="flex items-center gap-2">
+           <div className="w-6 h-6 bg-blue-600 rounded"></div>
+           <h2 className="text-lg font-bold text-slate-800">Analysis Workspace</h2>
+        </div>
+        <UserButton afterSignOutUrl="/" />
       </header>
 
       <main className="max-w-[1400px] mx-auto p-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Input Panel */}
+          
+          {/* Input Panel (Left Side) */}
           <div className="flex-1 space-y-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wider">
                 Paste Resume Content
               </label>
               <textarea 
-                className="w-full h-96 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none resize-none"
+                className="w-full h-96 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none resize-none text-slate-800"
                 placeholder="Paste your current resume text here..."
                 value={resume}
                 onChange={(e) => setResume(e.target.value)}
               />
               
               {error && (
-                <p className="mt-4 text-sm text-red-600 font-medium">⚠️ {error}</p>
+                <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-lg">
+                  <p className="text-sm text-red-600 font-medium">⚠️ {error}</p>
+                </div>
               )}
 
               <button 
@@ -87,9 +106,9 @@ export default function ProductPage() {
             </div>
           </div>
 
-          {/* Output Panel */}
+          {/* Output Panel (Right Side) */}
           <div className="flex-1">
-            <div className="bg-white h-full min-h-[600px] p-8 rounded-2xl shadow-inner border border-slate-200 prose prose-slate max-w-none">
+            <div className="bg-white h-full min-h-[600px] p-8 rounded-2xl shadow-inner border border-slate-200 prose prose-slate max-w-none overflow-y-auto">
               {analysis ? (
                 <ReactMarkdown>{analysis}</ReactMarkdown>
               ) : (
@@ -100,6 +119,7 @@ export default function ProductPage() {
               )}
             </div>
           </div>
+
         </div>
       </main>
     </div>

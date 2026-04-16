@@ -22,6 +22,18 @@ resource "aws_cloudfront_distribution" "main" {
     domain_name = "${aws_apigatewayv2_api.main.id}.execute-api.us-east-1.amazonaws.com"
     origin_id   = "APIGatewayOrigin"
     origin_path = "/dev" # <--- CRITICAL: This maps /api/* to /dev/api/*
+
+    custom_error_response {
+      error_code            = 403
+      response_code         = 200
+      response_page_path    = "/index.html"
+    }
+
+    custom_error_response {
+      error_code            = 404
+      response_code         = 200
+      response_page_path    = "/index.html"
+    }
     
     custom_origin_config {
       http_port              = 80

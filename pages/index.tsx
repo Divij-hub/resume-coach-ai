@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-// Switch these to @clerk/nextjs to match the Provider in _app.tsx
-import { SignInButton, UserButton, SignedIn, SignedOut } from "@clerk/clerk-react";
+import { SignInButton, UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { Rocket, ShieldCheck, Sparkles } from 'lucide-react';
+// Use <Sparkles className="w-5 h-5 text-blue-500" /> near your headline
+
 
 export default function LandingPage() {
   const [isClient, setIsClient] = useState(false);

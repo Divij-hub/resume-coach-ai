@@ -1,10 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'export',
-  images: { unoptimized: true },
-  typescript: {
-    ignoreBuildErrors: true, // This helps you pass the demo build
+  reactStrictMode: true,
+  output: 'export', // MANDATORY for S3/CloudFront deployment
+  images: {
+    unoptimized: true, // Required for static export
   },
 };
 
