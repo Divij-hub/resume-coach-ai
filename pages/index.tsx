@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+// Switch these to @clerk/nextjs to match the Provider in _app.tsx
 import { SignInButton, UserButton, SignedIn, SignedOut } from "@clerk/clerk-react";
 
 export default function LandingPage() {
