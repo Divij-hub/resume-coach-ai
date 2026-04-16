@@ -24,31 +24,29 @@ bedrock = boto3.client(
     region_name=os.getenv("BEDROCK_REGION", "us-east-1")
 )
 
-# --- CORS Configuration [cite: 205] ---
-if USE_DYNAMODB:
-    try:
-        config = get_secret(SECRET_NAME)
-        origins = config.get("CORS_ORIGINS", "http://localhost:3000").split(",")
-    except Exception:
-        origins = ["*"]
-else:
-    origins = ["*"]
+# --- Updated CORS Configuration ---
+# We explicitly allow your CloudFront domain and localhost for development
+origins = [
+    "http://localhost:3000",
+    "https://d8bh9r3rlkcvv.cloudfront.net",
+]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all (GET, POST, OPTIONS, etc.)
+    allow_headers=["*"],  # Allow all (Authorization, Content-Type, etc.)
 )
 
-# --- Data Model for Resume Coach [cite: 29, 207] ---
+# --- Updated Data Model ---
 class ResumeInput(BaseModel):
-    resume_text: str = Field(..., min_length=100)
-    job_description: str = Field(..., min_length=50)
+    # Lowered min_length to 10 for easier testing
+    resume_text: str = Field(..., min_length=10) 
+    job_description: str = Field(..., min_length=10)
     target_role: str = Field(default="Professional Role")
     years_experience: int = Field(default=0, ge=0)
     session_id: str = Field(default_factory=lambda: "default-session")
-
 # --- System Prompt [cite: 37-53] ---
 SYSTEM_PROMPT = """
 You are a Professional Resume Coach and Executive Recruiter. [cite: 37]
